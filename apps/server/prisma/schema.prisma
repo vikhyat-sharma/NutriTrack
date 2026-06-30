@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  profile       Profile?
+  oauthAccounts OAuthAccount[]
+  sessions      SessionToken[]
+  meals         Meal[]
+}
+
+model Profile {
+  id             String  @id @default(cuid())
+  user           User    @relation(fields: [userId], references: [id])
+  userId         String  @unique
+  name           String
+  age            Int
+  gender         String
+  heightCm       Float
+  weightKg       Float
+  activityLevel  String
+  fitnessGoal    String
+  targetWeightKg Float?
+  createdAt      DateTime @default(now())
+}
+
+model FoodItem {
+  id          String @id @default(cuid())
+  externalId  String?
+  name        String
+  brand       String?
+  servingText String?
+  isCustom    Boolean @default(false)
+  user        User?   @relation(fields:[userId], references:[id])
+  userId      String?
+  nutrients   FoodNutrition[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FoodNutrition {
+  id         String  @id @default(cuid())
+  foodItem   FoodItem @relation(fields:[foodItemId], references:[id])
+  foodItemId String
+  calories   Float
+  proteinG   Float
+  carbsG     Float
+  fatG       Float
+  fiberG     Float
+  createdAt  DateTime @default(now())
+}
+
+model Meal {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields:[userId], references:[id])
+  userId    String
+  date      DateTime
+  type      String
+  items     MealItem[]
+  createdAt DateTime  @default(now())
+}
+
+model MealItem {
+  id         String  @id @default(cuid())
+  meal       Meal    @relation(fields:[mealId], references:[id])
+  mealId     String
+  foodItem   FoodItem @relation(fields:[foodItemId], references:[id])
+  foodItemId String
+  qty        Float
+  serving    String?
+  createdAt  DateTime @default(now())
+}
+
+model OAuthAccount {
+  id         String  @id @default(cuid())
+  provider   String
+  providerId String
+  user       User    @relation(fields:[userId], references:[id])
+  userId     String
+  createdAt  DateTime @default(now())
+}
+
+model SessionToken {
+  id               String @id @default(cuid())
+  user             User   @relation(fields:[userId], references:[id])
+  userId           String
+  refreshTokenHash String
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+}
