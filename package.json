@@ -1,0 +1,13 @@
+{
+  "name": "macrowise",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "pnpm --filter @macrowise/server dev",
+    "build": "pnpm -w -s run build"
+  }
+}
