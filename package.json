@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev:server": "pnpm --filter @macrowise/server dev",
+    "dev:web": "pnpm --filter @macrowise/web dev",
+    "dev:mobile": "pnpm --filter @macrowise/mobile start",
     "build": "pnpm -w -s run build"
   }
 }
