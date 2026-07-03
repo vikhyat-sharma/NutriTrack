@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "MacroWise",
+    "slug": "macrowise",
+    "scheme": "macrowise",
+    "platforms": ["ios", "android"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic"
+  }
+}
