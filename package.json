@@ -10,6 +10,10 @@
     "dev:server": "pnpm --filter @macrowise/server dev",
     "dev:web": "pnpm --filter @macrowise/web dev",
     "dev:mobile": "pnpm --filter @macrowise/mobile start",
-    "build": "pnpm -w -s run build"
+    "build:server": "pnpm --filter @macrowise/server build",
+    "build:web": "pnpm --filter @macrowise/web build",
+    "db:migrate": "pnpm --filter @macrowise/server exec prisma migrate dev",
+    "db:generate": "pnpm --filter @macrowise/server exec prisma generate",
+    "db:studio": "pnpm --filter @macrowise/server exec prisma studio"
   }
 }
