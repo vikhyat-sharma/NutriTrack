@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { UpdateProfileDto } from './users.dto';
 
@@ -19,20 +19,43 @@ export class UsersService {
   }
 
   async upsertProfile(userId: string, dto: UpdateProfileDto) {
-    return this.prisma.profile.upsert({
+    const existing = await this.prisma.profile.findUnique({ where: { userId } });
+
+    if (!existing) {
+      // Creating for the first time — all core fields are required
+      const required = ['name', 'age', 'gender', 'heightCm', 'weightKg', 'activityLevel', 'fitnessGoal'] as const;
+      const missing = required.filter((f) => dto[f] === undefined || dto[f] === null);
+      if (missing.length > 0) {
+        throw new BadRequestException(`Missing required profile fields: ${missing.join(', ')}`);
+      }
+      return this.prisma.profile.create({
+        data: {
+          userId,
+          name: dto.name!,
+          age: dto.age!,
+          gender: dto.gender!,
+          heightCm: dto.heightCm!,
+          weightKg: dto.weightKg!,
+          activityLevel: dto.activityLevel!,
+          fitnessGoal: dto.fitnessGoal!,
+          targetWeightKg: dto.targetWeightKg,
+        },
+      });
+    }
+
+    // Updating — only apply provided fields
+    return this.prisma.profile.update({
       where: { userId },
-      create: {
-        userId,
-        name: dto.name ?? '',
-        age: dto.age ?? 0,
-        gender: dto.gender ?? 'OTHER',
-        heightCm: dto.heightCm ?? 0,
-        weightKg: dto.weightKg ?? 0,
-        activityLevel: dto.activityLevel ?? 'SEDENTARY',
-        fitnessGoal: dto.fitnessGoal ?? 'MAINTAIN',
-        targetWeightKg: dto.targetWeightKg,
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.age !== undefined && { age: dto.age }),
+        ...(dto.gender !== undefined && { gender: dto.gender }),
+        ...(dto.heightCm !== undefined && { heightCm: dto.heightCm }),
+        ...(dto.weightKg !== undefined && { weightKg: dto.weightKg }),
+        ...(dto.activityLevel !== undefined && { activityLevel: dto.activityLevel }),
+        ...(dto.fitnessGoal !== undefined && { fitnessGoal: dto.fitnessGoal }),
+        ...(dto.targetWeightKg !== undefined && { targetWeightKg: dto.targetWeightKg }),
       },
-      update: { ...dto },
     });
   }
 }
