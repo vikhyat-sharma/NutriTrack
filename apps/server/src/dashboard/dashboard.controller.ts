@@ -12,18 +12,23 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('daily-summary')
-  daily(@Req() req: AuthRequest, @Query('date') date: string) {
-    return this.dashboardService.getDailySummary(req.user.id, date ?? new Date().toISOString().split('T')[0]);
+  daily(
+    @Req() req: AuthRequest,
+    @Query('date') date: string,
+    @Query('timezone') timezone: string,
+  ) {
+    const today = new Date().toISOString().split('T')[0];
+    return this.dashboardService.getDailySummary(req.user.id, date ?? today, timezone ?? 'UTC');
   }
 
   @Get('weekly-summary')
-  weekly(@Req() req: AuthRequest) {
-    return this.dashboardService.getWeeklySummary(req.user.id);
+  weekly(@Req() req: AuthRequest, @Query('timezone') timezone: string) {
+    return this.dashboardService.getWeeklySummary(req.user.id, timezone ?? 'UTC');
   }
 
   @Get('monthly-summary')
-  monthly(@Req() req: AuthRequest) {
-    return this.dashboardService.getMonthlySummary(req.user.id);
+  monthly(@Req() req: AuthRequest, @Query('timezone') timezone: string) {
+    return this.dashboardService.getMonthlySummary(req.user.id, timezone ?? 'UTC');
   }
 
   @Get('weight-trend')
