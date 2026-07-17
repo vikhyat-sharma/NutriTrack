@@ -22,7 +22,7 @@ model User {
 
 model Profile {
   id             String   @id @default(cuid())
-  user           User     @relation(fields: [userId], references: [id])
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String   @unique
   name           String
   age            Int
@@ -32,8 +32,11 @@ model Profile {
   activityLevel  String
   fitnessGoal    String
   targetWeightKg Float?
+  timezone       String   @default("UTC")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model FoodItem {
@@ -43,17 +46,20 @@ model FoodItem {
   brand       String?
   servingText String?
   isCustom    Boolean         @default(false)
-  user        User?           @relation(fields: [userId], references: [id])
+  user        User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String?
   nutrients   FoodNutrition[]
   mealItems   MealItem[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([name, userId])
 }
 
 model FoodNutrition {
   id         String   @id @default(cuid())
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
   foodItemId String
   calories   Float
   proteinG   Float
@@ -61,43 +67,55 @@ model FoodNutrition {
   fatG       Float
   fiberG     Float
   createdAt  DateTime @default(now())
+
+  @@index([foodItemId])
 }
 
 model Meal {
   id        String     @id @default(cuid())
-  user      User       @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   date      DateTime
   type      String
   items     MealItem[]
   createdAt DateTime   @default(now())
+
+  @@index([userId, date])
 }
 
 model MealItem {
   id         String   @id @default(cuid())
-  meal       Meal     @relation(fields: [mealId], references: [id])
+  meal       Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
   mealId     String
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
   foodItemId String
   qty        Float
   serving    String?
   createdAt  DateTime @default(now())
+
+  @@index([mealId])
+  @@index([foodItemId])
 }
 
 model OAuthAccount {
   id         String   @id @default(cuid())
   provider   String
   providerId String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String
   createdAt  DateTime @default(now())
+
+  @@unique([provider, providerId])
+  @@index([userId])
 }
 
 model SessionToken {
   id               String   @id @default(cuid())
-  user             User     @relation(fields: [userId], references: [id])
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId           String
   refreshTokenHash String
   expiresAt        DateTime
   createdAt        DateTime @default(now())
+
+  @@index([userId])
 }
