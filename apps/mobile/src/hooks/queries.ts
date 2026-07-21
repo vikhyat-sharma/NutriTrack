@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi, dashboardApi, mealsApi, usersApi, assistantApi } from '../api/client';
 import { useAuthStore } from '../store/auth.store';
 
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export function useLogin() {
   const setTokens = useAuthStore((s) => s.setTokens);
   return useMutation({
@@ -20,8 +22,26 @@ export function useRegister() {
   });
 }
 
+export function useLogout() {
+  const { refreshToken, logout } = useAuthStore();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      refreshToken ? authApi.logout(refreshToken).then((r) => r.data) : Promise.resolve(),
+    onSettled: async () => {
+      await logout();
+      qc.clear();
+    },
+  });
+}
+
 export function useMe() {
-  return useQuery({ queryKey: ['me'], queryFn: () => usersApi.me().then((r) => r.data) });
+  const token = useAuthStore((s) => s.accessToken);
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: () => usersApi.me().then((r) => r.data),
+    enabled: !!token,
+  });
 }
 
 export function useUpdateProfile() {
@@ -33,14 +53,20 @@ export function useUpdateProfile() {
 }
 
 export function useMeals(date: string) {
-  return useQuery({ queryKey: ['meals', date], queryFn: () => mealsApi.list(date).then((r) => r.data) });
+  return useQuery({
+    queryKey: ['meals', date],
+    queryFn: () => mealsApi.list(date).then((r) => r.data),
+  });
 }
 
 export function useCreateMeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => mealsApi.create(data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['meals'] }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['meals', (variables as any).date] });
+      qc.invalidateQueries({ queryKey: ['daily'] });
+    },
   });
 }
 
@@ -48,17 +74,28 @@ export function useDeleteMeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => mealsApi.remove(id).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['meals'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['meals'] });
+      qc.invalidateQueries({ queryKey: ['daily'] });
+    },
   });
 }
 
 export function useDailySummary(date: string) {
-  return useQuery({ queryKey: ['daily', date], queryFn: () => dashboardApi.daily(date).then((r) => r.data) });
+  return useQuery({
+    queryKey: ['daily', date],
+    queryFn: () => dashboardApi.daily(date, tz).then((r) => r.data),
+  });
 }
 
 export function useMacroAdjustments() {
   return useMutation({
-    mutationFn: ({ consumed, targets }: { consumed: Record<string, unknown>; targets: Record<string, unknown> }) =>
-      assistantApi.macroAdjustments(consumed, targets).then((r) => r.data),
+    mutationFn: ({
+      consumed,
+      targets,
+    }: {
+      consumed: Record<string, unknown>;
+      targets: Record<string, unknown>;
+    }) => assistantApi.macroAdjustments(consumed, targets).then((r) => r.data),
   });
 }
