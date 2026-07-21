@@ -34,37 +34,35 @@ export function calorieTarget(tdeeVal: number, goal: FitnessGoal, dailyDeficit =
 }
 
 /**
- * Derives macro targets from a daily calorie target using a sensible default split.
+ * Derives macro targets from a daily calorie target.
+ * Throws if profile values are physiologically invalid (zero or negative).
  */
 export function calculateNutritionTargets(profile: ProfileMetrics): NutritionTargets {
+  if (profile.weightKg <= 0) throw new Error('weightKg must be greater than 0');
+  if (profile.heightCm <= 0) throw new Error('heightCm must be greater than 0');
+  if (profile.age <= 0) throw new Error('age must be greater than 0');
+
   const bmr = bmrMifflinStJeor(profile.weightKg, profile.heightCm, profile.age, profile.gender);
   const tdeeValue = tdee(bmr, profile.activityLevel);
   const dailyCalories = calorieTarget(tdeeValue, profile.fitnessGoal);
   const proteinG = Math.max(1, Math.round(profile.weightKg * 1.6));
   const proteinCalories = proteinG * 4;
-  const fatG = Math.max(1, Math.round(dailyCalories * 0.25 / 9));
+  const fatG = Math.max(1, Math.round((dailyCalories * 0.25) / 9));
   const fatCalories = fatG * 9;
   const carbCalories = Math.max(0, dailyCalories - proteinCalories - fatCalories);
   const carbsG = Math.max(0, Math.round(carbCalories / 4));
   const fiberG = Math.max(20, Math.round(profile.weightKg * 0.3));
   const waterMl = Math.max(2500, Math.round(profile.weightKg * 35));
 
-  return {
-    bmr,
-    tdee: tdeeValue,
-    dailyCalories,
-    proteinG,
-    carbsG,
-    fatG,
-    fiberG,
-    waterMl,
-  };
+  return { bmr, tdee: tdeeValue, dailyCalories, proteinG, carbsG, fatG, fiberG, waterMl };
 }
 
 /**
  * Produces a macro summary from a list of food entries.
  */
-export function summarizeMealEntries(entries: Array<Pick<MacroBreakdown, 'calories' | 'proteinG' | 'carbsG' | 'fatG' | 'fiberG'>>): MacroBreakdown {
+export function summarizeMealEntries(
+  entries: Array<Pick<MacroBreakdown, 'calories' | 'proteinG' | 'carbsG' | 'fatG' | 'fiberG'>>,
+): MacroBreakdown {
   return entries.reduce<MacroBreakdown>(
     (summary, entry) => ({
       calories: summary.calories + entry.calories,
