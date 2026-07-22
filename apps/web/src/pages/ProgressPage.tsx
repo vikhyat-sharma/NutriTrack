@@ -8,34 +8,40 @@ export default function ProgressPage() {
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Progress</h2>
-
-      <Section title="This Week" loading={wLoading} data={weekly} />
-      <Section title="This Month" loading={mLoading} data={monthly} />
+      <Section title="This Week" days={7} loading={wLoading} data={weekly} />
+      <Section title="This Month" days={30} loading={mLoading} data={monthly} />
     </div>
   );
 }
 
-function Section({ title, loading, data }: { title: string; loading: boolean; data: any }) {
+interface SectionProps {
+  title: string;
+  days: number;
+  loading: boolean;
+  data: any;
+}
+
+function Section({ title, days, loading, data }: SectionProps) {
   return (
-    <div style={styles.card}>
+    <section style={styles.card} aria-label={title}>
       <h3 style={styles.sectionTitle}>{title}</h3>
-      {loading && <p>Loading…</p>}
+      {loading && <p aria-live="polite">Loading…</p>}
       {data && (
         <>
           <p style={styles.meta}>{data.startDate} → {data.endDate} · {data.mealCount} meals logged</p>
           {data.targets ? (
             <>
-              <MacroBar label="Calories" value={data.totals?.calories ?? 0} target={(data.targets.dailyCalories ?? 0) * (title === 'This Week' ? 7 : 30)} unit="kcal" color="#16a34a" />
-              <MacroBar label="Protein" value={data.totals?.proteinG ?? 0} target={(data.targets.proteinG ?? 0) * (title === 'This Week' ? 7 : 30)} color="#3b82f6" />
-              <MacroBar label="Carbs" value={data.totals?.carbsG ?? 0} target={(data.targets.carbsG ?? 0) * (title === 'This Week' ? 7 : 30)} color="#f59e0b" />
-              <MacroBar label="Fat" value={data.totals?.fatG ?? 0} target={(data.targets.fatG ?? 0) * (title === 'This Week' ? 7 : 30)} color="#ef4444" />
+              <MacroBar label="Calories" value={data.totals?.calories ?? 0} target={(data.targets.dailyCalories ?? 0) * days} unit="kcal" color="#16a34a" />
+              <MacroBar label="Protein" value={data.totals?.proteinG ?? 0} target={(data.targets.proteinG ?? 0) * days} color="#3b82f6" />
+              <MacroBar label="Carbs" value={data.totals?.carbsG ?? 0} target={(data.targets.carbsG ?? 0) * days} color="#f59e0b" />
+              <MacroBar label="Fat" value={data.totals?.fatG ?? 0} target={(data.targets.fatG ?? 0) * days} color="#ef4444" />
             </>
           ) : (
             <p style={{ color: '#6b7280' }}>Set up your profile to see targets.</p>
           )}
         </>
       )}
-    </div>
+    </section>
   );
 }
 
