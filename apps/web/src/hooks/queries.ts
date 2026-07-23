@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi, dashboardApi, mealsApi, nutritionApi, usersApi, assistantApi } from '../api/client';
 import { useAuthStore } from '../store/auth.store';
 
-// Auth hooks
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
 export function useLogin() {
   const setTokens = useAuthStore((s) => s.setTokens);
   return useMutation({
@@ -21,9 +24,28 @@ export function useRegister() {
   });
 }
 
-// Profile hooks
+export function useLogout() {
+  const { refreshToken, logout } = useAuthStore();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      refreshToken ? authApi.logout(refreshToken).then((r) => r.data) : Promise.resolve(),
+    onSettled: () => {
+      logout();
+      qc.clear();
+    },
+  });
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+
 export function useMe() {
-  return useQuery({ queryKey: ['me'], queryFn: () => usersApi.me().then((r) => r.data) });
+  const token = useAuthStore((s) => s.accessToken);
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: ({ signal }) => usersApi.me(signal).then((r) => r.data),
+    enabled: !!token,
+  });
 }
 
 export function useUpdateProfile() {
@@ -34,25 +56,37 @@ export function useUpdateProfile() {
   });
 }
 
-// Nutrition hooks
+// ── Nutrition ─────────────────────────────────────────────────────────────────
+
 export function useNutritionTargets(profile: Record<string, unknown> | null) {
+  // Use stable primitive key fields instead of the object reference to prevent infinite refetch
+  const key = profile
+    ? [profile.age, profile.gender, profile.heightCm, profile.weightKg, profile.activityLevel, profile.fitnessGoal]
+    : null;
   return useQuery({
-    queryKey: ['nutrition-targets', profile],
-    queryFn: () => nutritionApi.targets(profile!).then((r) => r.data),
+    queryKey: ['nutrition-targets', key],
+    queryFn: ({ signal }) => nutritionApi.targets(profile!, signal).then((r) => r.data),
     enabled: !!profile,
   });
 }
 
-// Meals hooks
+// ── Meals ─────────────────────────────────────────────────────────────────────
+
 export function useMeals(date: string) {
-  return useQuery({ queryKey: ['meals', date], queryFn: () => mealsApi.list(date).then((r) => r.data) });
+  return useQuery({
+    queryKey: ['meals', date],
+    queryFn: ({ signal }) => mealsApi.list(date, signal).then((r) => r.data),
+  });
 }
 
 export function useCreateMeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => mealsApi.create(data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['meals'] }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['meals', (variables as any).date] });
+      qc.invalidateQueries({ queryKey: ['daily'] });
+    },
   });
 }
 
@@ -60,24 +94,38 @@ export function useDeleteMeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => mealsApi.remove(id).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['meals'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['meals'] });
+      qc.invalidateQueries({ queryKey: ['daily'] });
+    },
   });
 }
 
-// Dashboard hooks
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
 export function useDailySummary(date: string) {
-  return useQuery({ queryKey: ['daily', date], queryFn: () => dashboardApi.daily(date).then((r) => r.data) });
+  return useQuery({
+    queryKey: ['daily', date],
+    queryFn: ({ signal }) => dashboardApi.daily(date, tz, signal).then((r) => r.data),
+  });
 }
 
 export function useWeeklySummary() {
-  return useQuery({ queryKey: ['weekly'], queryFn: () => dashboardApi.weekly().then((r) => r.data) });
+  return useQuery({
+    queryKey: ['weekly'],
+    queryFn: ({ signal }) => dashboardApi.weekly(tz, signal).then((r) => r.data),
+  });
 }
 
 export function useMonthlySummary() {
-  return useQuery({ queryKey: ['monthly'], queryFn: () => dashboardApi.monthly().then((r) => r.data) });
+  return useQuery({
+    queryKey: ['monthly'],
+    queryFn: ({ signal }) => dashboardApi.monthly(tz, signal).then((r) => r.data),
+  });
 }
 
-// Assistant hooks
+// ── Assistant ─────────────────────────────────────────────────────────────────
+
 export function useMealSuggestions(targets: Record<string, unknown> | null) {
   return useQuery({
     queryKey: ['meal-suggestions', targets],
@@ -88,13 +136,19 @@ export function useMealSuggestions(targets: Record<string, unknown> | null) {
 
 export function useMacroAdjustments() {
   return useMutation({
-    mutationFn: ({ consumed, targets }: { consumed: Record<string, unknown>; targets: Record<string, unknown> }) =>
-      assistantApi.macroAdjustments(consumed, targets).then((r) => r.data),
+    mutationFn: ({
+      consumed,
+      targets,
+    }: {
+      consumed: Record<string, unknown>;
+      targets: Record<string, unknown>;
+    }) => assistantApi.macroAdjustments(consumed, targets).then((r) => r.data),
   });
 }
 
 export function useExplainNutrition() {
   return useMutation({
-    mutationFn: (values: Record<string, unknown>) => assistantApi.explainNutrition(values).then((r) => r.data),
+    mutationFn: (values: Record<string, unknown>) =>
+      assistantApi.explainNutrition(values).then((r) => r.data),
   });
 }
